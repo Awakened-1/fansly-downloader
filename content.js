@@ -167,22 +167,34 @@ const onDownloadClickFeed = (event) => {
   const feedUsername = feedItemContent.querySelector(".display-name").textContent.replace(/\s+/g, "");
 
   // Check if image or video
-  downloadLinks.forEach((downloadLink) => {
-    if (downloadLink.startsWith("img:")) {
-      fetch(downloadLink.substr(4))
-        .then((res) => res.text())
-        .then((data) => {
-          const type = getTypeFromBlobStart(data.slice(0, 10));
+downloadLinks.forEach((downloadLink) => {
+      const rawUrl = downloadLink.substr(4); // strip 'img:' or 'vid:'
 
-          const name = feedUsername + "-" + Math.random().toString(36).substr(2) + type;
+      if (downloadLink.startsWith("img:")) {
+        fetch(rawUrl)
+          .then((res) => res.text())
+          .then((data) => {
+            const type = getTypeFromBlobStart(data.slice(0, 10));
+            const name = `${feedUsername}-${Math.random().toString(36).substr(2)}${type}`;
+            downloadFile(rawUrl, name);
+          });
+      } else if (downloadLink.startsWith("vid:")) {
+        let name = `${feedUsername}-video-${Math.random().toString(36).substr(2)}.mp4`;
 
-          downloadFile(downloadLink.substr(4), name);
-        });
-    } else {
-      const name = feedUsername + "-" + downloadLink.split("/")[4].split("?")[0];
+        try {
+          const url = new URL(rawUrl);
+          const parts = url.pathname.split("/");
 
-      downloadFile(downloadLink.substr(4), name);
-    }
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.length > 0) {
+            name = `${feedUsername}-${lastPart.split("?")[0]}`;
+          }
+        } catch (e) {
+          console.warn("Could not parse blob URL; using fallback name:", rawUrl);
+        }
+
+        downloadFile(rawUrl, name);
+      }
   });
 };
 
